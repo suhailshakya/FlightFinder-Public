@@ -1,0 +1,25 @@
+﻿@page "/"
+@namespace Vacation.Pages
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+
+@* calls App.razor *@
+<app>
+    <component type="typeof(App)" render-mode="ServerPrerendered" />
+</app>
+
+@* js file already included in framework  *@
+<script src="_framework/blazor.server.js"></script>
+
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title> Your Vacation! </title>
+    <base href="~/" />
+    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="_content/Radzen.Blazor/css/material-base.css" />
+</head>
+<body>
+    <script src="_content/Radzen.Blazor/Radzen.Blazor.js"></script>
+</body>
+</html>

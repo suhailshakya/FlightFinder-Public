@@ -1,0 +1,72 @@
+﻿@page "/"
+@inject IJSRuntime JSRuntime
+
+@* main page to route the program *@
+
+<h3 align="center"> Welcome Shanti </h3>
+<div class="rz-p-0 rz-p-md-12 d-flex justify-content-center align-items-center">
+    <RadzenStack Orientation="Orientation.Vertical" AlignItems="AlignItems.Center" Gap="1rem" Class="rz-p-4 rz-mb-6 rz-border-radius-1" Style="border: 2px solid var(--rz-grid-cell-border);">
+        <RadzenLabel Text="Enter your email:" />
+        <RadzenTextBox @bind-Value="@inputValue" Id="inputField" class="rz-mx-auto" />
+        <RadzenButton Text="Authorize yourself" Click="@GetAuth" class="rz-mx-auto" />
+    </RadzenStack>
+</div>
+
+@code {
+    [Inject]
+    private NavigationManager navMan { get; set; }
+
+    [Inject]
+    private Services.SharedDataService transferData { get; set; }
+
+    //access Authorization class
+    [Inject]
+    private Vacation.Auth.Authorization authServ { get; set; }
+
+    private string inputValue = "";
+    private bool isValueEqual = false;
+    string expectedValue = "";
+    private string acTk = "";
+
+    private async Task GetAuth(){
+        //check if user entered input is valid
+        expectedValue = transferData.getCorrectUser();
+        if (inputValue.Equals(expectedValue))
+        {
+            transferData.emailAddress = inputValue;
+            try
+            {
+                await authServ.SetAuth();
+                acTk = authServ.GetAccessToken();
+                if (acTk.Length < 1)
+                {
+                    Console.WriteLine("No token g, try again");
+                }
+                else
+                {
+                    Console.WriteLine("Token retrieval successful");
+                    Console.WriteLine(acTk);
+                    //check if user entered input is valid
+                    if (inputValue.Equals(expectedValue))
+                    {
+                        //re-render
+                        StateHasChanged();
+                        transferData.SharedToken = acTk;
+                        //opens the next page --> CitySelection
+                        navMan.NavigateTo("/CitySelection");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                //Handle exceptions or errors during authentication
+                Console.WriteLine($"An error occurred during authentication: {ex.Message}");
+            }
+        }
+        else
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "Invalid input! Please enter a valid email.");
+        }
+
+    }
+}

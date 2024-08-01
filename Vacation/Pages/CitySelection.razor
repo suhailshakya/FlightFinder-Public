@@ -1,0 +1,170 @@
+﻿@using Services
+@using System.Text.Json;
+@inject Microsoft.JSInterop.IJSRuntime JSRuntime
+@using Vacation
+@inject ReadFile ReadFileService
+@page "/CitySelection"
+
+<h3 align="center"> Where would you like to go? </h3>
+
+<RadzenCard Class="rz-my-12 rz-mx-auto" Style="max-width: 900px" AlignItems="AlignItems.Center">
+    <RadzenStack Orientation="Orientation.Horizontal" Gap="1rem" Class="rz-mx-auto">
+        <!-- First RadzenStack -->
+        <RadzenStack Orientation="Orientation.Vertical" Gap="1rem" Class="rz-p-4 rz-mb-6 rz-border-radius-1" Style="border: var(--rz-grid-cell-border); width: 700px; background: linear-gradient(to right, #6495ED, #F0FFFF);">
+            <div align="center">
+                <RadzenText Text="@googleCityDesc" align="center" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0" />
+            </div>
+            <div class="image-container" align="center">
+                <img src=@photoUrl alt='Place Image' width="400" height="350">
+            </div>
+            <RadzenButton Text="Get new city" Click="@OnInitialized" class="rz-mx-auto" />
+        </RadzenStack>
+
+        <RadzenStack Orientation="Orientation.Vertical" Gap="1rem" Class="rz-p-4 rz-mb-6 rz-border-radius-1" Style="border: var(--rz-grid-cell-border); width: 250px; background: linear-gradient(to right, #F0FFFF, #6495ED);">
+            <label>Select a city to depart from:</label>
+            <div style="border: 1px solid white; padding: 0.5rem; text-align: center; margin-top: 1rem;">
+                <div align="left">
+                    @foreach (var option in sourceOptions)
+                    {
+                        <input type="radio" id="@option.Id" name="selectedOption" checked="@IsOptionSelected(option.Id)" @onclick="() => SelectOption(option.Id)" />
+                        <label for="@option.Id">@option.Name</label>
+                        <br />
+                    }
+                </div>
+            </div>
+            <br />
+            <label>Select a Depart date:</label>
+            <div style="border: 1px solid white; padding: 0.5rem; text-align: center;">
+                <div>
+                    <InputDate @bind-Value="selectedDepartDate" />
+                </div>
+            </div>
+            <br />
+            <label>Select a Return date:</label>
+            <div style="border: 1px solid white; padding: 0.5rem; text-align: center;">
+                <div>
+                    <InputDate @bind-Value="selectedReturnDate" />
+                </div>
+            </div>
+            <br />
+            <RadzenButton Text="Get Flight Info!" Click="@GetIataAndFlight" class="rz-mx-auto" />
+        </RadzenStack>
+    </RadzenStack>
+</RadzenCard>
+
+
+@code {
+    [Inject]
+    private HttpClient HttpClient { get; set; }
+    [Inject]
+    private NavigationManager navMan { get; set; }
+    [Inject]
+    private Services.SharedDataService transferData { get; set; }
+
+    //object to access AirportCodes class to receive rand city, get iata and get flights
+    [Inject]
+    private Vacation.Flights.AirportCodes randCity { get; set; }
+
+    protected List<string> cityInfo = new List<string>();
+
+    private string apiKey = "";
+    public string RandomCity => cityInfo[0];
+    private string CityCode => cityInfo[2];
+    private string CountryCode => cityInfo[3];
+    private string photoReference = "";
+    private List<string> googleInfo = new List<string>();
+    private string photoUrl;
+    private string selectedOption;
+    private DateTime selectedDepartDate = DateTime.Today.AddDays(1);
+    private DateTime selectedReturnDate = DateTime.Today.AddDays(2);
+    private Task<List<string>> iataInfo = null;
+    private List<RadioButtonOption> sourceOptions = new List<RadioButtonOption>
+    {
+        new RadioButtonOption { Id = "Toronto", Name = "Toronto" },
+        new RadioButtonOption { Id = "Kathmandu", Name = "Kathmandu" }
+    };
+    private string googleCityDesc = "";
+    
+    //on page initialization, generate random city and display 
+    //override OnInitializedAsync base class
+    protected override void OnInitialized()
+    {
+        apiKey = ReadFileService.ReadFileCreds("googlePhotoKey");
+        ClearDisplayedValues(); // Clear displayed values before refreshing
+        RefreshValues();
+    }
+
+    private void ClearDisplayedValues()
+    {
+        // Clear the displayed values or perform any necessary cleanup
+        cityInfo.Clear();
+    }
+
+    private async Task RefreshValues()
+    {
+        cityInfo = await randCity.getRecordsDB(); 
+        await GoogleCityPhoto();
+    }
+
+    private async Task GoogleCityPhoto(){
+        //call google photo api
+        googleInfo = await randCity.GetCityPhoto(RandomCity);
+        photoReference = googleInfo[0];
+        googleCityDesc = googleInfo[1];
+        transferData.arrivalCity = RandomCity;
+
+        //use photo reference value to get the actual photo
+        if (!string.IsNullOrEmpty(photoReference))
+        {
+            //RUN THIS API second to retrieve the actual photo from the reference value from Google Photos API
+            photoUrl = $"https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference={photoReference}&key={apiKey}";
+        }
+        StateHasChanged();
+    }
+
+    private async Task GetIataAndFlight()
+    {
+        if (string.IsNullOrEmpty(selectedOption) || selectedDepartDate.Equals("") || selectedReturnDate.Equals(""))
+        {
+            // Display an alert
+            await JSRuntime.InvokeVoidAsync("alert", "Departing City, Depart Date and Return Date need to be Selected");
+            return; // Cancel method execution
+        }
+        else if (selectedDepartDate > selectedReturnDate)
+        {
+            await JSRuntime.InvokeVoidAsync("alert", "The depart date cannot be set after the return date");
+            return;
+        }
+        else if (selectedOption == "Toronto")
+        {
+            transferData.departCode = "YYZ";
+        }
+        else
+        {
+            transferData.departCode = "KTM";
+        }
+        iataInfo = randCity.GetIata(RandomCity, CountryCode, CityCode);
+        
+        navMan.NavigateTo("/TicketItinerary");
+        transferData.SharedIataData = iataInfo;
+        transferData.departDate = selectedDepartDate;
+        transferData.returnDate = selectedReturnDate;
+    }
+
+    private bool IsOptionSelected(string optionId)
+    {
+        return selectedOption == optionId;
+    }
+
+    private void SelectOption(string optionId)
+    {
+        selectedOption = optionId;
+    }
+
+    private class RadioButtonOption
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+    }
+
+}

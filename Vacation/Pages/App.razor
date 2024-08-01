@@ -1,0 +1,9 @@
+﻿<Router AppAssembly="@typeof(Program).Assembly">
+    @* checks if the route can be found *@
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)"/>
+    </Found>
+    <NotFound>
+        <p>Not found g</p>
+    </NotFound>
+</Router>

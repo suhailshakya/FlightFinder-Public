@@ -1,0 +1,193 @@
+﻿@page "/TicketItinerary"
+@inject IJSRuntime JSRuntime
+@using System.Net.Mail
+@using System.Net
+@using System.Threading;
+
+<h3 align="center"> Your Flight Itinerary </h3>
+
+<RadzenCard Class="rz-my-12 rz-mx-auto" Style="max-width: 420px" AlignItems="AlignItems.Center">
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.Start" Gap="1rem" Class="rz-p-4">
+        <RadzenStack Gap="0">
+            <RadzenText TextStyle="TextStyle.Overline" class="rz-display-flex rz-mt-2 rz-my-0">Passenger</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body1"><b> Shanti Bajracharya </b></RadzenText>
+            <RadzenText TextStyle="TextStyle.Overline" class="rz-display-flex rz-mt-4 rz-mb-0">Vacation</RadzenText>
+            <RadzenText TextStyle="TextStyle.Body1"><b>@transferData.arrivalCity</b></RadzenText>
+        </RadzenStack>
+    </RadzenStack>
+
+    <RadzenCard class="rz-background-color-primary-light rz-shadow-0 rz-border-radius-0 rz-p-8" style="margin: 1rem calc(-1 * var(--rz-card-padding));">
+        <RadzenText Text="Flight Itinerary " class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0" />
+        <RadzenStack>
+            @if (isLoading)
+            {
+                <div id="loadingMessage">
+                    <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0"> Loading ... </RadzenText>
+                </div>
+            }
+            else
+            {
+                if (flightDetails == true)
+                {
+                    <RadzenRow RowGap="0">
+                        <RadzenColumn SizeSM="4">
+                            <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">@flightStuff[0]</RadzenText>
+                            <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>@returnedFlightInfo[0]</b></RadzenText>
+                            <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">@flightStuff[1]</RadzenText>
+                            <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>@returnedFlightInfo[1]</b></RadzenText>
+                        </RadzenColumn>
+                        <RadzenColumn SizeSM="8">
+                            <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">@flightStuff[2]</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>@returnedFlightInfo[2]</b></RadzenText>
+                            <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">@flightStuff[3]</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>@returnedFlightInfo[3]</b></RadzenText>
+                        </RadzenColumn>
+                        <RadzenColumn SizeSM="8">
+                            <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">@flightStuff[4]</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>@returnedFlightInfo[4]</b></RadzenText>
+                            <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">@flightStuff[5]</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>@returnedFlightInfo[5]</b></RadzenText>
+                        </RadzenColumn>
+                        <RadzenColumn SizeSM="8">
+                            <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">@flightStuff[6]</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>@returnedFlightInfo[6]</b></RadzenText>
+                            <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">@flightStuff[7]</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>@returnedFlightInfo[7]</b></RadzenText>
+                        </RadzenColumn>
+                        <RadzenColumn SizeSM="8">
+                            <RadzenText TextStyle="TextStyle.Overline" class="rz-color-on-primary-light rz-display-flex rz-mt-4 rz-mb-0">@flightStuff[8]</RadzenText>
+                                <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>@returnedFlightInfo[8]</b></RadzenText>
+                        </RadzenColumn>
+                    </RadzenRow>
+                }
+                else
+                {
+                    <RadzenText TextStyle="TextStyle.Body1" class="rz-color-on-primary-light"><b>@flightResults</b></RadzenText>
+                }
+            }
+        </RadzenStack>
+    </RadzenCard>
+
+    <RadzenStack Orientation="Orientation.Horizontal" JustifyContent="JustifyContent.End" Gap="0">
+        <RadzenButton Text="Confirm Ticket!" Click="@SendEmail" Disabled="!IsButtonDisabled" />
+    </RadzenStack>
+</RadzenCard>
+
+
+@code {
+    [Inject]
+    private Services.SharedDataService transferData { get; set; }
+
+    [Inject]
+    private NavigationManager navMan { get; set; }
+
+    //object to access Itinerary class to run and get flight itineraries
+    [Inject]
+    private Vacation.Flights.Itinerary flightInfo { get; set; }
+
+    [Inject]
+    private Vacation.Email emailService { get; set; }
+
+    private List<string> iataDataFromCS;
+    private List<string> returnedFlightInfo;
+    private string flightResults = "";
+    private List<string> flightStuff = new List<string> { "Flight total price: ", "Departing from: ", "Depart flight duration: ", "Departing DateTime: ", "Departure layover : ", "Returning from: ", "Return flight duration: ", "Returning DateTime: ", "Return layover: " };
+    private int NumOfIatas = 0;
+    private int NumOfFlightInfo = 0;
+    private string departDate = "";
+    private string returnDate = "";
+    private bool flightDetails = false;
+    private bool IsButtonDisabled { get; set; } = false;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        departDate = transferData.departDate.ToString("yyyy-MM-dd");
+        returnDate = transferData.returnDate.ToString("yyyy-MM-dd");
+        iataDataFromCS = await transferData.SharedIataData;
+        NumOfIatas = iataDataFromCS.Count;
+        Console.WriteLine("iata total: " + NumOfIatas);
+        if (iataDataFromCS != null || NumOfIatas == 0)
+        {
+            //check if iata code is successfully generated
+            if (iataDataFromCS[0].Length > 1)
+            {
+                returnedFlightInfo = await flightInfo.GetFlight(transferData.arrivalCity, transferData.departCode, departDate, returnDate, iataDataFromCS[0], transferData.SharedToken) as List<string>;
+                NumOfFlightInfo = returnedFlightInfo.Count;
+                if (NumOfFlightInfo < 2)
+                {
+                    IsButtonDisabled = false;
+                    flightDetails = false;
+                    if (returnedFlightInfo[0].Contains("Suhail"))
+                    {
+                        //issue calling api, probably due to invalid parameters
+                        flightResults = returnedFlightInfo[0];
+                    }
+                    else if (returnedFlightInfo[0].Length < 10)
+                    {
+                        flightResults = returnedFlightInfo[0] + " is the ticket price ... which is too expensive. Please select again.";
+                    }
+                    else
+                    {
+                        //just no data for the selected iata code
+                        flightResults = returnedFlightInfo[0];
+                    }
+                }
+                else
+                {
+                    IsButtonDisabled = true;
+                    flightDetails = true;
+                }
+                //this is where "loading" should be removed, since get flight info has been returned with any info
+                isLoading = false;
+            }
+        }
+        else
+        {
+            //issue getting iatas from Ninjas api --> either Ninjas issue or params issue
+            Console.WriteLine("No IATAs for selected city");
+            await JSRuntime.InvokeVoidAsync("alert", "There seems to be no responding Airports. Please try again.");
+        }
+    }
+
+    private async Task SendEmail()
+    {
+        if (IsButtonDisabled)
+        {
+            string fromMail = "suhailcha84@gmail.com";
+            string fromPassword = "httpjsxsmpnumguz";
+
+            MailMessage msg = new MailMessage();
+            msg.From = new MailAddress(fromMail);
+            msg.Subject = "Your Vacation!";
+            msg.To.Add(new MailAddress(transferData.emailAddress));
+            msg.Body = $"<html><body> You're going to ... {transferData.arrivalCity} !!! </body> </html>";
+            msg.IsBodyHtml = true;
+
+            var smtpClient = new SmtpClient("smtp.gmail.com")
+                {
+                    Port = 587,
+                    Credentials = new NetworkCredential(fromMail, fromPassword),
+                    EnableSsl = true,
+                };
+            try
+            {
+                smtpClient.Send(msg);
+                await JSRuntime.InvokeVoidAsync("alert", $"Email sent to {transferData.emailAddress}");
+                await Task.Delay(5000);
+                Environment.Exit(0);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending email: {ex.Message}");
+            }
+        }
+        else
+        {
+            await Task.Delay(5000);
+            await JSRuntime.InvokeVoidAsync("alert", "Please go back");
+        }
+    }
+
+
+}
